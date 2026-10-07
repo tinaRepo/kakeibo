@@ -54,7 +54,8 @@
 | 特定のコミットだけ取り込む | `git cherry-pick <コミットID>` |
 | ブランチの変更を取り込む | `git merge develop`(または `git rebase develop`) |
 | コミットの取り消し(履歴を残す) | `git revert <コミットID>` |
-| タグ | `git tag -a v1.0.0 -m "v1.0.0"` / `git push origin v1.0.0` |
+| バージョン更新(コミットとタグも作成) | `npm version patch` / `npm version minor` / `npm version major` |
+| バージョン更新をプッシュ | `git push origin HEAD --follow-tags` |
 | テンプレートの設定 | `git config commit.template .gitmessage` |
 
 コミットメッセージの書き方は [git-conventions.md](git-conventions.md)。

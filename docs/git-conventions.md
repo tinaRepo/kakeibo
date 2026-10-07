@@ -72,12 +72,15 @@ git push -u origin feature/csv-import       # 4. プッシュ → プルリク�
 - マージ方法は **Squash and merge**(1つのプルリクエスト = 1コミット)を推奨。その場合、プルリクエストのタイトルを `type(scope): subject` の形にする。
 - `develop` へのマージで検証環境に、`main` へのマージで本番に自動デプロイされる([deploy-cicd.md](deploy-cicd.md))。
 
-## 4. リリースの目印(タグ。任意)
+## 4. バージョンとリリース
+`package.json` のバージョンを基準にし、次のコマンドで更新する。`package.json` と `package-lock.json` が更新され、バージョン更新のコミットと `v<バージョン>` タグが作られる。実行前に作業ツリーをクリーンにする。
 ```bash
-git tag -a v1.0.0 -m "v1.0.0"
-git push origin v1.0.0
+npm version patch  # 修正: 1.0.0 -> 1.0.1
+npm version minor  # 機能追加: 1.0.0 -> 1.1.0
+npm version major  # 破壊的変更: 1.0.0 -> 2.0.0
+git push origin HEAD --follow-tags
 ```
-バージョンは `v<major>.<minor>.<patch>`(互換性が壊れる=major、機能追加=minor、修正=patch)。
+バージョンは `major.minor.patch` 形式。初回リリースは `1.0.0` とし、互換性が壊れる変更は major、機能追加は minor、修正は patch を上げる。
 
 ## 5. やってはいけないこと
 - `main` / `develop` への force push、直接コミット。
