@@ -1,0 +1,12 @@
+# コピーして .dev.vars にする(ローカル開発のみ。本番では wrangler.toml の [vars] と `wrangler secret` を使う)
+ADMIN_DEV_BYPASS=true
+# Web Push: `npm run vapid` で生成した2つの値
+# VAPID_PUBLIC_KEY=
+# VAPID_PRIVATE_KEY=
+# Turnstile(Cloudflare公式のテスト用キー。常に成功)。使わないなら空のままで、確認なしで動きます
+# TURNSTILE_SECRET=1x0000000000000000000000000000000AA
+# TURNSTILE_SITE_KEY=1x00000000000000000000AA
+# 管理者ログイン(パスワード+確認コード)を試すとき: npm run admin:setup の3つの値を書き、上の ADMIN_DEV_BYPASS を外す
+# ADMIN_PASSWORD_HASH=
+# ADMIN_SESSION_SECRET=
+# ADMIN_TOTP_SECRET=
