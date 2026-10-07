@@ -1,0 +1,9 @@
+# <type>(<scope>): <subject>   ← 50文字程度まで。末尾に句点は付けない
+#
+# <body>   ← 何を・なぜ変えたか(任意)
+#
+# <footer> ← BREAKING CHANGE: ... / Closes #123(任意)
+#
+# type: feat fix docs style refactor perf test build ci chore revert
+# scope: worker web admin offline db docs ci deps
+# 詳しくは docs/git-conventions.md

@@ -1,0 +1,86 @@
+# ============================================================
+# Cloudflare Workers 設定(ローカル / 検証 dev / 本番 production)
+#   詳細な手順は docs/cloudflare-setup.md
+#
+#   トップレベル  … ローカル開発専用(npm run dev:api / db:migrate)。実リソースは使いません
+#   [env.dev]       … 検証環境      → wrangler ... --env dev
+#   [env.production]… 本番環境      → wrangler ... --env production
+#
+# 注意: bindings(D1/R2)と [vars] は環境に「継承されない」ため、環境ごとに全部書きます
+# ============================================================
+name = "kakeibo"
+main = "src/worker/index.ts"
+compatibility_date = "2025-09-01"
+
+[assets]
+directory = "./dist"
+not_found_handling = "single-page-application"
+run_worker_first = ["/api/*"]
+
+# ---------- ローカル(トップレベル) ----------
+[[d1_databases]]
+binding = "DB"
+database_name = "kakeibo-local"
+database_id = "local-placeholder" # ローカルでは実在しなくてOK
+
+[[r2_buckets]]
+binding = "RECEIPTS"
+bucket_name = "kakeibo-receipts-local"
+
+[triggers]
+crons = ["*/5 * * * *"]
+# ローカルの変数・秘密は .dev.vars に書く(.dev.vars.example 参照)
+
+# ---------- 検証環境(dev) ----------
+[env.dev]
+name = "kakeibo-dev"
+workers_dev = true # https://kakeibo-dev.<アカウントのサブドメイン>.workers.dev で公開(独自ドメインは不要)
+preview_urls = false
+# 独自ドメインを使うようになったら: routes = [{ pattern = "kakeibo-dev.example.com", custom_domain = true }]
+
+[env.dev.triggers]
+crons = ["*/15 * * * *"] # 検証は15分おきで十分
+
+[[env.dev.d1_databases]]
+binding = "DB"
+database_name = "kakeibo-dev"
+database_id = "d713e4e7-b6f0-46ca-b53a-fca170fa1007"
+
+[[env.dev.r2_buckets]]
+binding = "RECEIPTS"
+bucket_name = "kakeibo-receipts-dev"
+
+[env.dev.vars]
+ACCESS_TEAM_DOMAIN = "" # Cloudflare Access は独自ドメインを取得してから(未設定=使わない)。管理者は「管理者ログイン」を使う
+ACCESS_AUD = ""
+VAPID_PUBLIC_KEY = "BGB8c078yOqdYAdsFMyLvqtNO4Pys7NTxvtH6362wrUD9o7q6jZw6PJr2i5JrNXOrZ0xH47W8EgIUF3Nj5j5Tb8" # npm run vapid の公開鍵(devとprodで別の鍵にする)
+VAPID_SUBJECT = "amukat0823@gmail.com"
+TURNSTILE_SITE_KEY = "" # 使うときは「サイトキー」と、secret の TURNSTILE_SECRET の【両方】を設定する(片方だけだと登録・ログインが拒否されます)
+# 秘密は wrangler secret(--env dev): VAPID_PRIVATE_KEY / TURNSTILE_SECRET / ADMIN_PASSWORD_HASH / ADMIN_SESSION_SECRET / ADMIN_TOTP_SECRET
+
+# ---------- 本番環境(production) ----------
+[env.production]
+name = "kakeibo"
+workers_dev = true # https://kakeibo.<アカウントのサブドメイン>.workers.dev で公開(独自ドメインは不要)
+preview_urls = false
+# 独自ドメインを使うようになったら: routes = [{ pattern = "kakeibo.example.com", custom_domain = true }]
+
+[env.production.triggers]
+crons = ["*/5 * * * *"]
+
+[[env.production.d1_databases]]
+binding = "DB"
+database_name = "kakeibo-prod"
+database_id = "dfb91b8e-bd3f-41c4-8096-b936f44ca7e0"
+
+[[env.production.r2_buckets]]
+binding = "RECEIPTS"
+bucket_name = "kakeibo-receipts-prod"
+
+[env.production.vars]
+ACCESS_TEAM_DOMAIN = ""
+ACCESS_AUD = ""
+VAPID_PUBLIC_KEY = "BJAoab8A1p52mE-vHejoE01Kho3bMn7Qw4FSEB6LtItpBScotbFMRsphEqTl4fURFDNS5bK_5RDG5xRxP_9HMhg"
+VAPID_SUBJECT = "amukat0823@gmail.com"
+TURNSTILE_SITE_KEY = "" # 本番は本物のサイトキー + secret の TURNSTILE_SECRET の両方を設定する
+# 秘密は wrangler secret(--env production): VAPID_PRIVATE_KEY / TURNSTILE_SECRET / ADMIN_PASSWORD_HASH / ADMIN_SESSION_SECRET / ADMIN_TOTP_SECRET
