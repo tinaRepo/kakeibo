@@ -1,0 +1,55 @@
+name: Deploy
+# develop ブランチ → 検証環境(dev) / main または master ブランチ → 本番環境(production)
+on:
+  push:
+    branches: [develop, main, master]
+concurrency:
+  group: deploy-${{ github.ref_name }}
+  cancel-in-progress: false
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: npm }
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run build
+      - run: npm test
+
+  deploy-dev:
+    needs: check
+    if: github.ref_name == 'develop'
+    runs-on: ubuntu-latest
+    environment: dev
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: npm }
+      - run: npm ci
+      - run: npm run build
+      - uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          preCommands: npx wrangler d1 migrations apply DB --remote --env dev
+          command: deploy --env dev
+
+  deploy-production:
+    needs: check
+    if: github.ref_name == 'main' || github.ref_name == 'master'
+    runs-on: ubuntu-latest
+    environment: production # GitHubの Environments で「承認が必要」にすると、本番デプロイの前に確認できる
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: npm }
+      - run: npm ci
+      - run: npm run build
+      - uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          preCommands: npx wrangler d1 migrations apply DB --remote --env production
+          command: deploy --env production
