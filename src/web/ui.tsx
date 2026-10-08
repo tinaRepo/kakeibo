@@ -46,6 +46,6 @@ export function AmountInput({ value, onChange, disabled }: { value: string; onCh
 
 export const TrashIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 10v6M14 10v6" /></svg>
 // 支出/収入/全部 などの切り替え
-export function Seg<T extends string>({ value, options, onChange }: { value: T; options: readonly (readonly [T, string])[]; onChange: (v: T) => void }) {
-  return <span className="seg" role="group">{options.map(([v, l]) => <button key={v} type="button" className={v === value ? 'on' : ''} aria-pressed={v === value} onClick={() => onChange(v)}>{l}</button>)}</span>
+export function Seg<T extends string>({ value, options, onChange, full }: { value: T; options: readonly (readonly [T, string])[]; onChange: (v: T) => void; full?: boolean }) {
+  return <span className={'seg' + (full ? ' full' : '')} role="group">{options.map(([v, l]) => <button key={v} type="button" className={v === value ? 'on' : ''} aria-pressed={v === value} onClick={() => onChange(v)}>{l}</button>)}</span>
 }

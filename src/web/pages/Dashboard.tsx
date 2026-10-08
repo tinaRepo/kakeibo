@@ -7,6 +7,7 @@ import { api, yen } from '../api'
 import { useCats } from '../hooks'
 import { cached } from '../offline/db'
 import { TxEditor } from '../TxParts'
+import { DetailSearch, PeriodPicker } from '../SearchBar'
 import { Bar, Seg, catIcon } from '../ui'
 import Breakdown, { COLORS } from './Breakdown'
 CJ.register(ArcElement, Tooltip, Legend)
@@ -44,14 +45,18 @@ export default function Dashboard() {
   const monthTotals = allMonths.map(ym => tableCats.reduce((a, c) => a + (s.months[ym][tableT][c.id] || 0), 0))
   const chipCats = cats.filter(c => c.is_active && (type === 'all' || c.type === type))
   const label = `${year}年${mon ? mon + '月' : ''}`
+  // いま効いている条件(初期値と違うもの)
+  const periodChanged = year !== now.getFullYear() || mon !== now.getMonth() + 1
+  const tags = [...(periodChanged ? [label] : []), ...(type !== 'all' ? [type === 'expense' ? '支出' : '収入'] : []),
+  ...(sel.length ? [sel.length <= 2 ? cats.filter(c => sel.includes(c.id)).map(c => c.name).join('・') : `カテゴリ ${sel.length}件`] : [])]
   return (<>
     <section className="tile"><div className="tile-in">
-      <div className="row"><button className="sub" aria-label="前の年" onClick={() => put({ year: String(year - 1) })}>‹</button><b>{year}年</b><button className="sub" aria-label="次の年" onClick={() => put({ year: String(year + 1) })}>›</button>
-        <select aria-label="表示する月" value={mon} onChange={e => put({ month: e.target.value })}><option value={0}>年間</option>{Array.from({ length: 12 }, (_, i) => <option key={i} value={i + 1}>{i + 1}月</option>)}</select></div>
-      <div className="row"><Seg value={type} options={[['all', '全部'], ['expense', '支出'], ['income', '収入']] as const} onChange={v => put({ type: v === 'all' ? '' : v, cats: '' })} /></div>
-      <details className="filter"><summary>カテゴリで絞り込み{sel.length ? `(${sel.length}件選択中)` : ''}</summary>
-        <div className="chips">{sel.length > 0 && <button className="chip" onClick={() => put({ cats: '' })}>選択を解除</button>}
-          {chipCats.map(c => <button key={c.id} className={'chip' + (sel.includes(c.id) ? ' on' : '')} aria-pressed={sel.includes(c.id)} onClick={() => toggle(c.id)}>{catIcon(c)} {c.name}</button>)}</div></details>
+      <PeriodPicker year={year} mon={mon} onChange={(y, m) => put({ year: String(y), month: String(m) })} />
+      <DetailSearch tags={tags} onReset={() => setSp({}, { replace: true })}>
+        <div className="field">種別<Seg full value={type} options={[['all', '全部'], ['expense', '支出'], ['income', '収入']] as const} onChange={v => put({ type: v === 'all' ? '' : v, cats: '' })} /></div>
+        <div className="field">カテゴリ(複数選択できます)
+          <div className="chips">{chipCats.map(c => <button key={c.id} className={'chip' + (sel.includes(c.id) ? ' on' : '')} aria-pressed={sel.includes(c.id)} onClick={() => toggle(c.id)}>{catIcon(c)} {c.name}</button>)}</div></div>
+      </DetailSearch>
       <p className="tagline">{label}の{type === 'income' ? '収入' : '支出'}</p><p className="hero">{yen(type === 'income' ? inT : exT)}</p>
       {type === 'all' && <p className="lead">収入 {yen(inT)}　収支 {yen(inT - exT)}</p>}
       {type !== 'income' && <p className="mute">うちサブスク {yen(subT)}</p>}
