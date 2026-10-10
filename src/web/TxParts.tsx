@@ -67,7 +67,7 @@ export function TxEditor({ init, defaultType = 'expense', onClose }: { init?: an
   return (
     <Modal title={init ? '明細を編集' : '明細を作成'} onClose={() => !save.isPending && onClose()}
       action={init && <button type="button" className="icon-btn" aria-label="この明細を削除" onClick={() => ask('この明細を削除しますか?(添付した画像も削除されます)', { ok: '削除', danger: true }).then(ok => ok && del.mutate())}><TrashIcon /></button>}>
-      <div className="field"><Seg value={f.type} options={[['expense', '支出'], ['income', '収入']] as const} onChange={t => setF({ ...f, type: t })} /></div>
+      <div className="field"><Seg full value={f.type} options={[['expense', '支出'], ['income', '収入']] as const} onChange={t => setF({ ...f, type: t })} /></div>
       <label className="field">日付<input type="date" value={f.date} onChange={e => setF({ ...f, date: e.target.value })} /></label>
       <label className="field">カテゴリ<select value={f.category_id} onChange={e => setF({ ...f, category_id: e.target.value })}>{tc.map(c => <option key={c.id} value={c.id}>{catIcon(c)} {c.name}</option>)}</select></label>
       <div className="field">金額<AmountInput value={f.amount} onChange={v => setF({ ...f, amount: v })} /></div>

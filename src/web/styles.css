@@ -18,7 +18,7 @@ p{margin:8px 0}.mute{color:var(--ink-48);font-size:14px;letter-spacing:-.224px}.
 a{color:var(--primary);text-decoration:none}a:hover{text-decoration:underline}
 /* global-nav / sub-nav-frosted */
 .gnav{position:sticky;top:0;z-index:20;height:44px;background:var(--black);color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 16px;font-size:12px;letter-spacing:-.12px}
-.gnav .brand{font-weight:600;font-size:14px}.gnav button{background:none;color:#fff;font-size:12px;min-height:44px;padding:0 0 0 16px;margin:0;border-radius:0}
+.gnav .brand{font-weight:600;font-size:14px}.gnav button{background:none;border:0;color:#fff;font-size:12px;min-height:44px;padding:0 0 0 16px;margin:0;border-radius:0}
 .snav{position:sticky;top:44px;z-index:19;height:52px;display:flex;align-items:center;gap:24px;overflow-x:auto;padding:0 16px;background:rgba(245,245,247,.8);backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);border-bottom:1px solid var(--hairline)}
 .snav a{color:var(--ink);font-size:14px;letter-spacing:-.224px;white-space:nowrap;height:100%;display:flex;align-items:center;border-bottom:2px solid transparent}.snav a.on{color:var(--primary);font-weight:600}.snav a:hover{text-decoration:none}
 /* tiles */
@@ -79,8 +79,12 @@ select{appearance:none;-webkit-appearance:none;padding-right:44px;background-rep
 .icon-btn{width:44px;padding:0;margin:0;justify-content:center;background:transparent;color:var(--ink);border:1px solid var(--hairline)}
 .modal-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px}
 dialog.modal.wide{width:min(720px,94vw)}
-.seg{display:inline-flex;border:1px solid var(--primary);border-radius:var(--pill);overflow:hidden;margin:2px 8px 2px 0}
-.seg button{border:0;border-radius:0;margin:0;background:transparent;color:var(--primary);padding:0 18px}.seg button.on{background:var(--primary);color:#fff}
+.seg{display:inline-flex;vertical-align:middle;border:1px solid var(--primary);border-radius:var(--pill);overflow:hidden;margin:2px 8px 2px 0;background:transparent}
+.seg.full{display:flex;width:100%;margin:0}
+.seg button{flex:0 0 auto;min-width:72px;justify-content:center;border:0;border-radius:0;margin:0;padding:0 20px;background:transparent;color:var(--primary);box-shadow:none}
+.seg.full button{flex:1 1 0}
+.seg button+button{box-shadow:inset 1px 0 0 var(--primary)}
+.seg button.on{background:var(--primary);color:#fff}
 .chips{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}.chip{min-height:36px;padding:0 14px;margin:0;font-size:14px;letter-spacing:-.224px;background:transparent;color:var(--ink);border:1px solid var(--hairline)}
 .chip.on{background:var(--primary);color:#fff;border-color:var(--primary)}
 .dark .chip,.tile .chip{color:inherit}.chip.on{color:#fff}
@@ -90,3 +94,16 @@ button.tx-btn:hover{filter:none;background:rgba(0,0,0,.03)}
 .tap{cursor:pointer}.income{color:var(--primary)}
 .total td,.total th{font-weight:600;border-top:2px solid var(--ink-48)}
 .gnav .refresh{padding:0 12px 0 0}
+
+/* ボタンの標準の見た目(iOSなど)を消す / 日付欄は文字を左寄せ(他の入力欄とそろえる) */
+button{-webkit-appearance:none;appearance:none}
+input[type=date],input[type=month],input[type=datetime-local]{text-align:left;min-width:0}
+input[type=date]::-webkit-date-and-time-value,input[type=month]::-webkit-date-and-time-value,input[type=datetime-local]::-webkit-date-and-time-value{text-align:left}
+/* 並べ替えボタン */
+.mv{width:36px;min-height:36px;padding:0;margin:0 0 0 4px;justify-content:center;font-size:13px;background:transparent;color:var(--ink);border:1px solid var(--hairline)}
+.mv:disabled{opacity:.3}
+
+/* 詳細検索 */
+.tag{display:inline-flex;align-items:center;min-height:28px;padding:0 12px;border-radius:var(--pill);background:var(--parchment);border:1px solid var(--hairline);font-size:13px;letter-spacing:-.224px;color:var(--ink)}
+.search .panel{margin:4px 0 12px}.search .badge{margin-left:6px}
+.search button.sub .badge{background:var(--primary);color:#fff}

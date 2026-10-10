@@ -29,6 +29,8 @@ export default function Settings() {
   const reissue = useMutation({ mutationFn: () => api('/me/owner-code', 'POST', {}), onSuccess: (r: any) => setCode(r.code), onError })
   const addCat = useMutation({ mutationFn: () => api('/categories', 'POST', cat), onSuccess: () => { setCat({ ...cat, name: '', icon: '' }); inv('categories') }, onError })
   const upCat = useMutation({ mutationFn: (c: any) => api('/categories/' + c.id, 'PUT', { name: c.name, icon: c.icon, is_active: c.is_active }), onSuccess: () => { setEdit(null); inv('categories') }, onError })
+  const move = useMutation({ mutationFn: (v: { type: string; ids: number[] }) => api('/category-order', 'PUT', v), onSuccess: () => inv('categories'), onError })
+  const swap = (a: number[], i: number, j: number) => { const b = [...a];[b[i], b[j]] = [b[j], b[i]]; return b }
   const del = useMutation({ mutationFn: () => api('/ledger', 'DELETE', {}), onSuccess: () => clearLocal().then(() => qc.resetQueries()), onError })
   const pct = usage ? (usage.used / usage.limit) * 100 : 0
   return (
@@ -55,8 +57,16 @@ export default function Settings() {
         <div className="row"><select aria-label="種別" value={cat.type} onChange={e => setCat({ ...cat, type: e.target.value })}><option value="expense">支出</option><option value="income">収入</option></select>
           <input className="icon-in" aria-label="アイコン" placeholder="🏷️" value={cat.icon} onChange={e => setCat({ ...cat, icon: e.target.value })} />
           <input placeholder="カテゴリ名" value={cat.name} onChange={e => setCat({ ...cat, name: e.target.value })} /><button disabled={!cat.name.trim()} onClick={() => addCat.mutate()}>追加</button></div>
-        {cats.map(c => <div className="item" key={c.id}><span style={{ opacity: c.is_active ? 1 : .4 }}>{catIcon(c)}　{c.type === 'expense' ? '支出' : '収入'}・{c.name}</span>
-          <button className="sub sm" onClick={() => setEdit({ ...c })}>編集</button></div>)}</div>}
+        <p className="mute">▲▼で並び順を入れ替えられます。明細の入力や集計の表示順にも反映されます。</p>
+        {(['expense', 'income'] as const).map(t => {
+          const list = cats.filter(c => c.type === t); return (
+            <div key={t}><div className="day">{t === 'expense' ? '支出' : '収入'}</div>
+              {list.map((c, i) => <div className="item" key={c.id}><span style={{ opacity: c.is_active ? 1 : .4 }}>{catIcon(c)}　{c.name}</span>
+                <div style={{ whiteSpace: 'nowrap' }}>
+                  <button className="mv" aria-label={`${c.name}を上へ`} disabled={i === 0 || move.isPending} onClick={() => move.mutate({ type: t, ids: swap(list.map(x => x.id), i, i - 1) })}>▲</button>
+                  <button className="mv" aria-label={`${c.name}を下へ`} disabled={i === list.length - 1 || move.isPending} onClick={() => move.mutate({ type: t, ids: swap(list.map(x => x.id), i, i + 1) })}>▼</button>
+                  <button className="sub sm" style={{ marginLeft: 8 }} onClick={() => setEdit({ ...c })}>編集</button></div></div>)}</div>)
+        })}</div>}
       <div className="panel"><b>ログイン中の端末</b>
         {sessions.map(s => <div className="item" key={s.id}><div>{s.device_label || '不明な端末'}{s.current && ' (この端末)'}<div className="mute">最終利用 {s.last_used_at.slice(0, 10)}</div></div>
           {!s.current && <button className="sub sm" onClick={() => out.mutate(s.id)}>ログアウト</button>}</div>)}</div>

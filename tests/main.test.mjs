@@ -53,6 +53,30 @@ ok('無効化したメンバーはログイン不可(IDは解放)', (await req(j
 const aTx = await req(A.j, 'PUT', '/api/transactions/' + crypto.randomUUID(), { type: 'expense', date: '2026-10-01', category_id: A.cats[0].id, amount: 10, memo: 'owner-tx' })
 ok('他メンバーの明細はユーザーが編集できない', (await req(U, 'PUT', '/api/transactions/' + aTx.d.id, { type: 'expense', date: '2026-10-01', category_id: A.cats[0].id, amount: 20 })).s === 403)
 
+// ===== オーナー/メンバーの入口(コードに紐づくIDとパスワード) =====
+const MO = await reg('入口', 'entry_own')
+const invE = (await req(MO.j, 'POST', '/api/members/invite', { note: '入口テスト' })).d
+const UM = jar(), jr = await req(UM, 'POST', '/api/join', { code: invE.code, name: 'メンバー太郎' })
+ok('メンバーがコードで参加 → IDとパスワードが未設定なら作成を促す', jr.d.needs_credentials === true && jr.d.login_id === null, jr.d)
+ok('コードに紐づけてIDとパスワードを1組作成(現在のパスワードは不要)', (await req(UM, 'PUT', '/api/me/credentials', { login_id: 'member_taro', password: 'memberpass1' })).s === 200)
+const jr2 = await req(jar(), 'POST', '/api/join', { code: invE.code })
+ok('同じコードでも入れる(ID・パスワードが分からなくても大丈夫)。作成は促さず、既存のログインIDを返す', jr2.s === 200 && jr2.d.needs_credentials === false && jr2.d.login_id === 'member_taro', jr2.d)
+ok('メンバーがIDとパスワードでログイン', (await req(jar(), 'POST', '/api/login', { login_id: 'member_taro', password: 'memberpass1', role: 'user' })).s === 200)
+ok('メンバーのIDを「オーナーでログイン」に入れると案内される(403)', (await req(jar(), 'POST', '/api/login', { login_id: 'member_taro', password: 'memberpass1', role: 'owner' })).s === 403)
+ok('オーナーのIDを「メンバー」に入れると案内される(403)', (await req(jar(), 'POST', '/api/login', { login_id: 'entry_own', password: 'password123', role: 'user' })).s === 403)
+ok('パスワード違いでは入口の情報を漏らさない(401)', (await req(jar(), 'POST', '/api/login', { login_id: 'entry_own', password: 'wrongwrong1', role: 'user' })).s === 401)
+ok('入口の指定がなくても従来どおりログインできる', (await req(jar(), 'POST', '/api/login', { login_id: 'entry_own', password: 'password123' })).s === 200)
+
+// ===== カテゴリの並び替え =====
+const exIds = A.cats.filter(c => c.type === 'expense').map(c => c.id), rev = [...exIds].reverse()
+const orderNow = async t => (await req(A.j, 'GET', '/api/categories')).d.filter(c => c.type === t).map(c => c.id)
+ok('カテゴリの並び替え(順番が保存され、取得順に反映)', (await req(A.j, 'PUT', '/api/category-order', { type: 'expense', ids: rev })).s === 200 && JSON.stringify(await orderNow('expense')) === JSON.stringify(rev))
+ok('1つ入れ替えただけでも反映', (await req(A.j, 'PUT', '/api/category-order', { type: 'expense', ids: [rev[1], rev[0], ...rev.slice(2)] })).s === 200 && (await orderNow('expense'))[0] === rev[1])
+ok('種別違い・他の家計簿のID・重複は拒否', (await req(A.j, 'PUT', '/api/category-order', { type: 'income', ids: [exIds[0]] })).s === 400 && (await req(A.j, 'PUT', '/api/category-order', { type: 'expense', ids: [exIds[0], 999999] })).s === 400 && (await req(A.j, 'PUT', '/api/category-order', { type: 'expense', ids: [exIds[0], exIds[0]] })).s === 400)
+const inv3 = (await req(A.j, 'POST', '/api/members/invite', { can_category: false })).d, U3 = jar(); await req(U3, 'POST', '/api/join', { code: inv3.code, name: '三郎' })
+ok('カテゴリ編集の権限がないメンバーは並び替えできない', (await req(U3, 'PUT', '/api/category-order', { type: 'expense', ids: exIds })).s === 403)
+ok('サブスクの解約日は空にして保存できる', await (async () => { const s = await req(A.j, 'POST', '/api/subscriptions', { name: 'Netflix', category_id: exIds[0], amount: 1000, start_date: '2026-01-01', end_date: '2026-10-08' }); await req(A.j, 'PUT', '/api/subscriptions/' + s.d.id, { name: 'Netflix', category_id: exIds[0], amount: 1000, start_date: '2026-01-01', end_date: '' }); return (await req(A.j, 'GET', '/api/subscriptions')).d.find(x => x.id === s.d.id).end_date === null })())
+
 // ===== CSV =====
 const cat = A.cats.find(c => c.name === '食費').id, inc = A.cats.find(c => c.name === '給与').id
 const t1 = crypto.randomUUID()

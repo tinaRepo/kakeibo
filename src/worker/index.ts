@@ -121,10 +121,10 @@ app.post('/api/join', async c => {
     const hash = await sha(code.toUpperCase().slice(0, 2) + code.slice(2)), purpose = /^D/i.test(code) ? 'device' : 'handoff'
     const used = await c.env.DB.prepare('UPDATE device_links SET used_at = ? WHERE code_hash = ? AND purpose = ? AND used_at IS NULL AND expires_at > ?').bind(now(), hash, purpose, now()).run()
     if (used.meta.changes !== 1) return err(c, 401, 'コードが正しくないか、期限が切れています')
-    const dl = await c.env.DB.prepare('SELECT m.id, m.role FROM device_links d JOIN members m ON m.id = d.member_id WHERE d.code_hash = ? AND m.status = \'active\'').bind(hash).first<any>()
+    const dl = await c.env.DB.prepare('SELECT m.id, m.role, m.password_hash, m.login_id FROM device_links d JOIN members m ON m.id = d.member_id WHERE d.code_hash = ? AND m.status = \'active\'').bind(hash).first<any>()
     if (!dl) return err(c, 401, 'コードが正しくないか、期限が切れています')
     await startSession(c, dl.id)
-    return c.json({ role: dl.role })
+    return c.json({ role: dl.role, needs_credentials: !dl.password_hash, login_id: dl.login_id ?? null })
   }
   const m = await c.env.DB.prepare('SELECT * FROM members WHERE code_hash = ?').bind(await sha(code)).first<any>()
   if (!m || m.status === 'revoked') return err(c, 401, 'コードが正しくありません')
@@ -133,7 +133,7 @@ app.post('/api/join', async c => {
     await c.env.DB.prepare(`UPDATE members SET name = ?, status = 'active' WHERE id = ?`).bind(b.name.trim().slice(0, 30), m.id).run()
   }
   await startSession(c, m.id)
-  return c.json({ role: m.role })
+  return c.json({ role: m.role, needs_credentials: !m.password_hash, login_id: m.login_id ?? null }) // IDとパスワードは、コード(メンバー)に1組だけ紐づく
 })
 
 app.post('/api/login', async c => {
@@ -142,10 +142,12 @@ app.post('/api/login', async c => {
   // 失敗した回数だけを数える: 同じIP×IDは10分で5回まで、同じIDは(どのIPからでも)1時間で20回まで。成功したログインは数えない
   const kIp = `lf:${id}:${ipOf(c)}`, kId = `lfid:${id}`
   if ((await failCount(c.env.DB, kIp)) >= 5 || (await failCount(c.env.DB, kId)) >= 20) return c.json({ error: 'ログインに失敗した回数が多いため、しばらくログインできません(最長1時間)。時間をおいてお試しください' }, 429)
-  const m = id ? await c.env.DB.prepare('SELECT id, password_hash, status FROM members WHERE login_id = ?').bind(id).first<any>() : null
+  const m = id ? await c.env.DB.prepare('SELECT id, role, password_hash, status FROM members WHERE login_id = ?').bind(id).first<any>() : null
   const ok = await verifyPassword(String(b.password ?? ''), m?.password_hash ?? null)
   if (!m || !ok || m.status !== 'active') { await recordFail(c.env.DB, kIp, 600); await recordFail(c.env.DB, kId, 3600); return err(c, 401, 'ログインIDまたはパスワードが正しくありません') }
   await clearFails(c.env.DB, kIp)
+  // 「オーナーでログイン」「メンバーで参加」のどちらから入ったか。パスワードが合った人にだけ、入口の違いを案内する
+  if (b.role && b.role !== m.role) return err(c, 403, m.role === 'owner' ? 'これはオーナーのIDです。「オーナーでログイン」から入ってください' : 'これはメンバーのIDです。「メンバーで参加」から入ってください')
   await startSession(c, m.id)
   return c.json({ ok: true })
 })
@@ -197,6 +199,18 @@ app.put('/api/categories/:id', async c => {
   if (!can(m, 'can_category')) return err(c, 403, '権限がありません')
   await c.env.DB.prepare('UPDATE categories SET name = COALESCE(?, name), icon = COALESCE(?, icon), sort_order = COALESCE(?, sort_order), is_active = COALESCE(?, is_active) WHERE id = ? AND ledger_id = ?')
     .bind(b.name?.trim() || null, iconOf(b.icon), b.sort_order ?? null, b.is_active ?? null, c.req.param('id'), m.ledger_id).run()
+  return c.json({ ok: true })
+})
+
+// カテゴリの並び替え(種別ごとに、IDを並べた順で sort_order を振り直す)
+app.put('/api/category-order', async c => {
+  const m = c.get('m'), b = await c.req.json<any>(), db = c.env.DB
+  if (!can(m, 'can_category')) return err(c, 403, '権限がありません')
+  const ids: number[] = Array.isArray(b.ids) ? b.ids.map(Number) : []
+  if (!['expense', 'income'].includes(b.type) || !ids.length || ids.length > 200 || ids.some(n => !Number.isInteger(n)) || new Set(ids).size !== ids.length) return err(c, 400, '入力内容を確認してください')
+  const own = new Set(((await db.prepare('SELECT id FROM categories WHERE ledger_id = ? AND type = ?').bind(m.ledger_id, b.type).all()).results as any[]).map(r => r.id))
+  if (ids.some(i => !own.has(i))) return err(c, 400, 'カテゴリが正しくありません')
+  await db.batch(ids.map((id, i) => db.prepare('UPDATE categories SET sort_order = ? WHERE id = ? AND ledger_id = ?').bind(i, id, m.ledger_id)))
   return c.json({ ok: true })
 })
 

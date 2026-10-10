@@ -36,7 +36,9 @@ export default function Subscriptions() {
         <label className="field">カテゴリ<select value={f.category_id} onChange={e => setF({ ...f, category_id: e.target.value })}>{ex.map(c => <option key={c.id} value={c.id}>{catIcon(c)} {c.name}</option>)}</select></label>
         <div className="field">月額<AmountInput value={f.amount} onChange={v => setF({ ...f, amount: v })} /></div>
         <label className="field">契約開始日<input type="date" value={f.start_date} onChange={e => setF({ ...f, start_date: e.target.value })} /></label>
-        <label className="field">解約日(空欄=継続中)<input type="date" value={f.end_date} onChange={e => setF({ ...f, end_date: e.target.value })} /></label>
+        <div className="field">解約日(空欄=継続中)
+          <div className="row" style={{ margin: 0, flexWrap: 'nowrap' }}><input aria-label="解約日" type="date" style={{ flex: 1 }} value={f.end_date} onChange={e => setF({ ...f, end_date: e.target.value })} />
+            {f.end_date && <button type="button" className="sub" style={{ margin: 0 }} onClick={() => setF({ ...f, end_date: '' })}>クリア</button>}</div></div>
         <label className="field">備考<input value={f.memo} onChange={e => setF({ ...f, memo: e.target.value })} /></label>
         <div className="row end"><button className="sub" onClick={() => setF(null)}>キャンセル</button>
           <button disabled={save.isPending || !f.name.trim() || f.amount === '' || !f.category_id} onClick={() => save.mutate(f)}>保存</button></div>
